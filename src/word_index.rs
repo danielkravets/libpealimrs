@@ -60,7 +60,7 @@ impl WordIndex {
         }
     }
 
-    pub fn suggest(&self, prefix: &str) -> Vec<String> {
-        self.prefix_tree.find(prefix)
+    pub fn suggest(&self, prefix: &str, limit: usize) -> Vec<String> {
+        self.prefix_tree.find(prefix, limit)
     }
 }

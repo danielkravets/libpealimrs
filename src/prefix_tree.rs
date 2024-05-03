@@ -43,25 +43,28 @@ impl Trie {
         node.id = Some(id);
     }
 
-    pub(crate) fn find_string(&self, prefix: String) -> Vec<String> {
-        return self.find(&prefix);
+    pub(crate) fn find_string(&self, prefix: String, limit: usize) -> Vec<String> {
+        return self.find(&prefix, limit);
     }
 
-    pub(crate) fn find(&self, prefix: &str) -> Vec<String> {
+    pub(crate) fn find(&self, prefix: &str, limit: usize) -> Vec<String> {
         // let mut results = Vec::new();
         let node_opt = self.starts_with(prefix);
 
         return match node_opt {
             None => Vec::new(),
-            Some(n) => self.get_all_ids_from(n),
+            Some(n) => self.get_all_ids_from(n, limit),
         };
     }
 
-    fn get_all_ids_from(&self, node: &TrieNode) -> Vec<String> {
+    fn get_all_ids_from(&self, node: &TrieNode, limit: usize) -> Vec<String> {
         let mut ids = Vec::new();
         let mut stack = VecDeque::new();
         stack.push_back(node);
         while let Some(node) = stack.pop_front() {
+            if ids.len() >= limit {
+                break;
+            }
             if node.is_word_end {
                 ids.push(node.id.clone().unwrap());
             }
@@ -98,13 +101,28 @@ mod tests {
 
         trie.insert(String::from("laboratory"), String::from("1"));
         trie.insert(String::from("labrador"), String::from("2"));
-        trie.insert(String::from("lincoln"), String::from("2"));
+        trie.insert(String::from("lincoln"), String::from("3"));
 
-        let vec = trie.find("lab");
+        let vec = trie.find("lab", 15);
         // assert both "1" and "2" are in the vec
         assert_eq!(vec.len(), 2);
         assert_eq!(vec.contains(&String::from("1")), true);
         assert_eq!(vec.contains(&String::from("2")), true);
+    }
+
+    #[test]
+    fn test_trie_limit() {
+        let mut trie = Trie::new();
+
+        trie.insert(String::from("laboratory"), String::from("1"));
+        trie.insert(String::from("labrador"), String::from("2"));
+        trie.insert(String::from("labyrinth"), String::from("3"));
+
+        let vec = trie.find("lab", 2);
+        // assert both "1" and "2" are in the vec
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec.contains(&String::from("2")), true);
+        assert_eq!(vec.contains(&String::from("3")), true);
     }
 
     #[test]
@@ -130,7 +148,7 @@ mod tests {
                 trie.insert(String::from(word), String::from(word));
             }
             for (search_word, expected) in case.searches {
-                assert_eq!(trie.find(search_word).len(), expected, "Failed search for '{}'", search_word);
+                assert_eq!(trie.find(search_word, 15).len(), expected, "Failed search for '{}'", search_word);
             }
         }
     }

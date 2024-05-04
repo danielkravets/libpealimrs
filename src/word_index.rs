@@ -60,7 +60,8 @@ impl WordIndex {
         }
     }
 
-    pub fn suggest(&self, prefix: &str, limit: usize) -> Vec<String> {
-        self.prefix_tree.find(prefix, limit)
+    pub fn suggest(&self, prefix: &str, limit: usize) -> Vec<WordData> {
+        let ids = self.prefix_tree.find(prefix, limit);
+        ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Default)]
 struct TrieNode {
@@ -58,6 +58,7 @@ impl Trie {
     }
 
     fn get_all_ids_from(&self, node: &TrieNode, limit: usize) -> Vec<String> {
+        let mut found_ids = HashSet::new();
         let mut ids = Vec::new();
         let mut stack = VecDeque::new();
         stack.push_back(node);
@@ -66,7 +67,10 @@ impl Trie {
                 break;
             }
             if node.is_word_end {
-                ids.push(node.id.clone().unwrap());
+                if !found_ids.contains(node.id.as_ref().unwrap()) {
+                    ids.push(node.id.clone().unwrap());
+                    found_ids.insert(node.id.clone().unwrap());
+                }
             }
             for (_, child_node) in &node.children {
                 stack.push_back(child_node);

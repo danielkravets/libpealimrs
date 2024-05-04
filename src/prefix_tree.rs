@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 #[derive(Debug, Default)]
 struct TrieNode {
     children: HashMap<char, TrieNode>,
-    id: Option<String>,
+    ids: Option<HashSet<String>>,
     is_word_end: bool,
 }
 
@@ -11,7 +11,7 @@ impl TrieNode {
     fn new() -> Self {
         TrieNode {
             children: HashMap::new(),
-            id: None,
+            ids: None,
             is_word_end: false,
         }
     }
@@ -39,8 +39,14 @@ impl Trie {
         for c in word.chars() {
             node = node.children.entry(c).or_insert_with(TrieNode::new)
         }
+        // if node.is_word_end && node.ids != None {
+        //     println!("Duplicate word: {}", word);
+        // }
         node.is_word_end = true;
-        node.id = Some(id);
+        if node.ids == None {
+            node.ids = Some(HashSet::new());
+        }
+        node.ids.as_mut().unwrap().insert(id);
     }
 
     pub(crate) fn find_string(&self, prefix: String, limit: usize) -> Vec<String> {
@@ -67,15 +73,19 @@ impl Trie {
                 break;
             }
             if node.is_word_end {
-                if !found_ids.contains(node.id.as_ref().unwrap()) {
-                    ids.push(node.id.clone().unwrap());
-                    found_ids.insert(node.id.clone().unwrap());
+                for id in node.ids.as_ref().unwrap() {
+                    if !found_ids.contains(id) {
+                        ids.push(id.clone());
+                        found_ids.insert(id.clone());
+                    }
                 }
             }
             for (_, child_node) in &node.children {
                 stack.push_back(child_node);
             }
         }
+        // limit ids to limit
+        ids.truncate(limit);
         return ids;
     }
 
@@ -144,15 +154,20 @@ mod tests {
                 words_to_insert: vec!["rust", "rusty", "rustic"],
                 searches: vec![("rust", 3), ("rusty", 1), ("rustic", 1), ("rustling", 0)],
             },
+            TestCase {
+                words_to_insert: vec!["apple", "apple"],
+                searches: vec![("apple", 2)],
+            },
         ];
 
         for case in test_cases {
             let mut trie = Trie::new();
-            for word in case.words_to_insert {
-                trie.insert(String::from(word), String::from(word));
+            for (i, &word) in case.words_to_insert.iter().enumerate() {
+                trie.insert(String::from(word), i.to_string());
             }
             for (search_word, expected) in case.searches {
-                assert_eq!(trie.find(search_word, 15).len(), expected, "Failed search for '{}'", search_word);
+                let results = trie.find(search_word, 15);
+                assert_eq!(results.len(), expected, "Failed search for '{}'", search_word);
             }
         }
     }

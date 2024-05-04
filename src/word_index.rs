@@ -10,6 +10,7 @@ use crate::prefix_tree::Trie;
 pub struct WordIndex {
     data: HashMap<String, WordData>,
     index: HashMap<String, HashSet<String>>,
+    roots_index: HashMap<String, HashSet<String>>,
     prefix_tree: Trie,
 }
 
@@ -21,6 +22,11 @@ impl WordIndex {
         let data_index: HashMap<String, WordData> = words.iter().map(|word| (word.url_id.clone(), word.clone())).collect();
 
         let mut trie = Trie::new();
+
+        let mut roots_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
+            word.root.clone().join(""), HashSet::from([word.url_id.clone()])  //vec! {word.url_id.clone()}
+            // word.root.iter().rev().cloned().collect().join("-").clone(), HashSet::from([word.url_id.clone()])  //vec! {word.url_id.clone()}
+        )).collect();
 
         let mut inf_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
             word.word_normalized.clone(), HashSet::from([word.url_id.clone()])  //vec! {word.url_id.clone()}
@@ -45,7 +51,25 @@ impl WordIndex {
             }
         }
         // println!("Index size: {}", inf_index.len());
-        WordIndex { data: data_index, index: inf_index, prefix_tree: trie}
+        WordIndex {
+            data: data_index, index: inf_index, prefix_tree: trie, roots_index: roots_index,
+        }
+    }
+
+    fn collect_word_data_by_ids(&self, ids: &HashSet<String>) -> Vec<WordData> {
+        ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
+    }
+
+    pub fn get_by_root(&self, root: &str) -> Vec<WordData> {
+        let val = self.roots_index.get(root);
+        match val {
+            Some(v) => {
+                self.collect_word_data_by_ids(v)
+                // let url_ids: Vec<String> = v.iter().cloned().collect();
+                // url_ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
+            }
+            None => vec![],
+        }
     }
 
     pub fn get(&self, word: &str) -> Vec<WordData> {
@@ -53,8 +77,9 @@ impl WordIndex {
         let val = self.index.get(word_norm.as_str());
         match val {
             Some(v) => {
-                let url_ids: Vec<String> = v.iter().cloned().collect();
-                url_ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
+                self.collect_word_data_by_ids(v)
+                // let url_ids: Vec<String> = v.iter().cloned().collect();
+                // url_ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
             }
             None => vec![],
         }

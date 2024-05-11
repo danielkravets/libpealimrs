@@ -134,6 +134,17 @@ impl WordData {
     pub fn passive_binyan(&self) -> Option<String> {
         self.passive_binyan.clone() // Explicitly clone the Option
     }
+
+    /*#[cfg_attr(feature = "wasm-support", wasm_bindgen)]
+    pub fn matching_forms(&self, form_str: &str) -> Vec<WordForm> {
+        let mut matches: Vec<WordForm> = Vec::new();
+        for form in &self.forms {
+            if form.form_normalized == form_str {
+                matches.push(form.clone());
+            }
+        }
+        return matches;
+    }*/
 }
 
 // implementation of parsing from json into struct

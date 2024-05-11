@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use crate::util::normalize;
-use crate::word_dto::WordData;
+use crate::word_dto::{WordData, WordForm};
 #[cfg(feature = "wasm-support")]
 use wasm_bindgen::prelude::wasm_bindgen;
 use crate::prefix_tree::Trie;
@@ -52,7 +52,10 @@ impl WordIndex {
         }
         // println!("Index size: {}", inf_index.len());
         WordIndex {
-            data: data_index, index: inf_index, prefix_tree: trie, roots_index: roots_index,
+            data: data_index,
+            index: inf_index,
+            prefix_tree: trie,
+            roots_index: roots_index,
         }
     }
 
@@ -88,5 +91,25 @@ impl WordIndex {
     pub fn suggest(&self, prefix: &str, limit: usize) -> Vec<WordData> {
         let ids = self.prefix_tree.find(prefix, limit);
         ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
+    }
+
+
+    #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
+    pub fn matching_forms(&self, word_id: &str, form_str: &str) -> Vec<WordForm> {
+        let wd = self.data.get(word_id);
+        return match wd {
+            None => {
+                vec![]
+            }
+            Some(word_data) => {
+                let mut matches: Vec<WordForm> = Vec::new();
+                for form in &word_data.forms {
+                    if form.form_normalized == form_str {
+                        matches.push(form.clone());
+                    }
+                }
+                matches
+            }
+        }
     }
 }

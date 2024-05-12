@@ -1,10 +1,13 @@
 use std::collections::{HashMap, HashSet};
-use crate::util::normalize;
-use crate::word_dto::{WordData, WordForm};
+use rmp_serde::decode::Error;
+use rmp_serde::from_read;
 #[cfg(feature = "wasm-support")]
 use wasm_bindgen::prelude::wasm_bindgen;
 use crate::prefix_tree::Trie;
+use crate::util::normalize;
+use crate::word_dto::{WordData, WordForm};
 
+const WORDS_MSP: &'static [u8] = include_bytes!("../words/words.msp");
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 pub struct WordIndex {
@@ -14,18 +17,30 @@ pub struct WordIndex {
     prefix_tree: Trie,
 }
 
+impl WordIndex {
+    pub fn load_data(data: &[u8]) -> Result<Vec<WordData>, Error> {
+        let my_data: Vec<WordData> = from_read(&data[..])?;
+
+        Ok(my_data)
+    }
+}
+
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 impl WordIndex {
-    pub fn build(words: Vec<WordData>) -> WordIndex {
+    pub fn init_local() -> WordIndex {
+        let words = WordIndex::load_data(WORDS_MSP).unwrap();
+        WordIndex::build(words)
+    }
+
+    fn build(words: Vec<WordData>) -> WordIndex {
 
         // collect words vector into a hashmap with url_id as key
         let data_index: HashMap<String, WordData> = words.iter().map(|word| (word.url_id.clone(), word.clone())).collect();
 
         let mut trie = Trie::new();
 
-        let mut roots_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
-            word.root.clone().join(""), HashSet::from([word.url_id.clone()])  //vec! {word.url_id.clone()}
-            // word.root.iter().rev().cloned().collect().join("-").clone(), HashSet::from([word.url_id.clone()])  //vec! {word.url_id.clone()}
+        let roots_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
+            word.root.clone().join(""), HashSet::from([word.url_id.clone()])
         )).collect();
 
         let mut inf_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
@@ -50,7 +65,6 @@ impl WordIndex {
                 trie.insert(form.clone(), url_id.clone());
             }
         }
-        // println!("Index size: {}", inf_index.len());
         WordIndex {
             data: data_index,
             index: inf_index,
@@ -68,8 +82,6 @@ impl WordIndex {
         match val {
             Some(v) => {
                 self.collect_word_data_by_ids(v)
-                // let url_ids: Vec<String> = v.iter().cloned().collect();
-                // url_ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
             }
             None => vec![],
         }
@@ -81,8 +93,6 @@ impl WordIndex {
         match val {
             Some(v) => {
                 self.collect_word_data_by_ids(v)
-                // let url_ids: Vec<String> = v.iter().cloned().collect();
-                // url_ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
             }
             None => vec![],
         }
@@ -94,7 +104,6 @@ impl WordIndex {
     }
 
 
-    #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
     pub fn matching_forms(&self, word_id: &str, form_str: &str) -> Vec<WordForm> {
         let wd = self.data.get(word_id);
         return match wd {
@@ -110,6 +119,6 @@ impl WordIndex {
                 }
                 matches
             }
-        }
+        };
     }
 }

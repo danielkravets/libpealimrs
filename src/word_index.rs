@@ -22,7 +22,6 @@ pub struct WordIndex {
 impl WordIndex {
     pub fn load_data(data: &[u8]) -> Result<Vec<WordData>, Error> {
         let my_data: Vec<WordData> = from_read(&data[..])?;
-
         Ok(my_data)
     }
 }
@@ -35,10 +34,6 @@ impl WordIndex {
         let word_datas: Vec<WordData> = convert_pb_to_dto(word_list.words);
         let index = WordIndex::build(word_datas);
         index
-    }
-
-    pub async fn ainit_local() -> WordIndex {
-        WordIndex::init_local()
     }
 
     pub fn build(words: Vec<WordData>) -> WordIndex {

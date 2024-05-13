@@ -1,5 +1,5 @@
-mod word_index;
-mod word_dto;
+pub mod word_index;
+pub mod word_dto;
 mod prefix_tree;
 mod util;
 mod proto;

@@ -24,7 +24,7 @@ pub struct WordData {
     pub word_en: String,
     pub word_normalized: String,
     pub transcription: String,
-    pub root: Vec<String>,
+    pub root: String,
     pub forms: Vec<WordForm>,
     pub binyan: String,
     pub passive: Option<Vec<WordForm>>,

@@ -40,7 +40,7 @@ impl WordIndex {
         let mut trie = Trie::new();
 
         let roots_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
-            word.root.clone().join(""), HashSet::from([word.url_id.clone()])
+            word.root.clone(), HashSet::from([word.url_id.clone()])
         )).collect();
 
         let mut inf_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (

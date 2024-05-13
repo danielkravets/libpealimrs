@@ -2,16 +2,16 @@ mod word_index;
 mod word_dto;
 mod prefix_tree;
 mod util;
+mod proto;
 
 #[cfg(test)]
 mod tests {
-
     use std::time::Instant;
 
     use crate::word_index::WordIndex;
 
     #[test]
-    fn load_and_build_index() {
+    fn load_and_build_index_from_pb() {
         let start = Instant::now();
         let index = WordIndex::init_local();
         let end = Instant::now();

@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package worddata;
+
+// Define enums based on your Python Enum definitions
+enum Gender {
+  M = 0;
+  F = 1;
+  ALL_G = 2;
+}
+
+enum Person {
+  P_1ST = 0;
+  P_2ND = 1;
+  P_3RD = 2;
+  ALL_P = 3;
+}
+
+enum Number {
+  SINGULAR = 0;
+  PLURAL = 1;
+}
+
+enum Tense {
+  PAST = 0;
+  PRESENT = 1;
+  FUTURE = 2;
+  IMPERATIVE = 3;
+}
+
+enum Binyan {
+  PAAL = 0;
+  NIFAL = 1;
+  PIEL = 2;
+  PUAL = 3;
+  HIFIL = 4;
+  HUFAL = 5;
+  HITPAEL = 6;
+}
+
+// Define message formats for your data structures
+message WordForm {
+  Tense tense = 1;
+  Person person = 2;
+  Number number = 3;
+  Gender gender = 4;
+  string form = 5;
+  string form_normalized = 6;
+  string transcription = 7;
+  string meaning = 8;
+  optional string form_vowelled = 9;
+}
+
+message WordData {
+  string url_id = 1;
+  string word = 2;
+  string word_en = 3;
+  string word_normalized = 4;
+  string transcription = 5;
+  string root = 6;
+  repeated WordForm forms = 7;
+  Binyan binyan = 8;
+  repeated WordForm passive = 9;
+  optional Binyan passive_binyan = 10;
+}
+
+message WordDataList {
+  repeated WordData words = 1;
+}

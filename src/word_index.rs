@@ -1,13 +1,15 @@
 use std::collections::{HashMap, HashSet};
+
+use prost::Message;
 use rmp_serde::decode::Error;
 use rmp_serde::from_read;
 #[cfg(feature = "wasm-support")]
 use wasm_bindgen::prelude::wasm_bindgen;
+
 use crate::prefix_tree::Trie;
+use crate::proto::{convert_pb_to_dto, WORDS_PB};
 use crate::util::normalize;
 use crate::word_dto::{WordData, WordForm};
-
-const WORDS_MSP: &'static [u8] = include_bytes!("../words/words.msp");
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 pub struct WordIndex {
@@ -27,12 +29,19 @@ impl WordIndex {
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 impl WordIndex {
+
     pub fn init_local() -> WordIndex {
-        let words = WordIndex::load_data(WORDS_MSP).unwrap();
-        WordIndex::build(words)
+        let word_list: crate::proto::worddata::WordDataList = Message::decode(WORDS_PB).unwrap();
+        let word_datas: Vec<WordData> = convert_pb_to_dto(word_list.words);
+        let index = WordIndex::build(word_datas);
+        index
     }
 
-    fn build(words: Vec<WordData>) -> WordIndex {
+    pub async fn ainit_local() -> WordIndex {
+        WordIndex::init_local()
+    }
+
+    pub fn build(words: Vec<WordData>) -> WordIndex {
 
         // collect words vector into a hashmap with url_id as key
         let data_index: HashMap<String, WordData> = words.iter().map(|word| (word.url_id.clone(), word.clone())).collect();

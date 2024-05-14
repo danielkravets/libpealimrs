@@ -15,7 +15,7 @@ pub struct WordForm {
     pub meaning: String,
     pub form_vowelled: Option<String>,
 }
-#[cfg_attr(feature = "wasm-support", wasm_bindgen(getter_with_clone))]
+#[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 impl WordForm {
     #[cfg_attr(feature = "wasm-support", wasm_bindgen(constructor))]
     pub fn new(
@@ -58,7 +58,7 @@ pub struct WordData {
     pub passive_binyan: Option<String>,
 }
 
-#[cfg_attr(feature = "wasm-support", wasm_bindgen(getter_with_clone))]
+#[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 impl WordData {
     #[cfg_attr(feature = "wasm-support", wasm_bindgen(constructor))]
     pub fn new(
@@ -84,6 +84,24 @@ impl WordData {
             binyan,
             passive,
             passive_binyan,
+        }
+    }
+}
+
+#[cfg_attr(feature = "wasm-support", wasm_bindgen(getter_with_clone))]
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SearchResult {
+    pub word: WordData,
+    pub matching_forms: Vec<usize>,
+}
+
+#[cfg_attr(feature = "wasm-support", wasm_bindgen)]
+impl SearchResult {
+    #[cfg_attr(feature = "wasm-support", wasm_bindgen(constructor))]
+    pub fn new(word: WordData, matching_forms: Vec<usize>) -> SearchResult {
+        SearchResult {
+            word,
+            matching_forms,
         }
     }
 }

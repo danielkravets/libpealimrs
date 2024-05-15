@@ -47,31 +47,37 @@ impl WordIndex {
             word.root.clone(), HashSet::from([word.url_id.clone()])
         )).collect();
 
-        let mut inf_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
-            word.word_normalized.clone(), HashSet::from([word.url_id.clone()])  //vec! {word.url_id.clone()}
-        )).collect();
+        let mut hebrew_index: HashMap<String, HashSet<String>> = HashMap::new();
+        for word in &words {
+            if hebrew_index.contains_key(&word.word_normalized) {
+                // println!("Duplicate form: {}", word.word_normalized);
+                hebrew_index.get_mut(&word.word_normalized).unwrap().insert(word.url_id.clone());
+            } else {
+                hebrew_index.insert(word.word_normalized.clone(), HashSet::from([word.url_id.clone()]));
+            }
+        }
         for word in &words {
             for form in &word.forms {
                 if form.form_normalized.is_empty() {
                     continue;
                 }
-                if inf_index.contains_key(&form.form_normalized) {
+                if hebrew_index.contains_key(&form.form_normalized) {
                     // println!("Duplicate form: {}", form.form_normalized);
-                    inf_index.get_mut(&form.form_normalized).unwrap().insert(word.url_id.clone());
+                    hebrew_index.get_mut(&form.form_normalized).unwrap().insert(word.url_id.clone());
                 } else {
-                    inf_index.insert(form.form_normalized.clone(), HashSet::from([word.url_id.clone()]));
+                    hebrew_index.insert(form.form_normalized.clone(), HashSet::from([word.url_id.clone()]));
                 }
             }
         }
 
-        for (form, data) in &inf_index {
+        for (form, data) in &hebrew_index {
             for url_id in data {
                 trie.insert(form.clone(), url_id.clone());
             }
         }
         WordIndex {
             data: data_index,
-            index: inf_index,
+            index: hebrew_index,
             prefix_tree: trie,
             roots_index: roots_index,
         }
@@ -131,6 +137,12 @@ impl WordIndex {
 
     fn matching_forms_inner(word_data: &WordData, form_str_norm: &str) -> Vec<usize> {
         let mut matches: Vec<usize> = Vec::new();
+        if word_data.word_normalized == form_str_norm {
+            // infinitive form is not in the list of forms
+            // usize can't be negative, so we will use word_data.forms.len() as an indication
+            // that it matches the infinitive form
+            matches.push(word_data.forms.len());
+        }
         for (i, form) in word_data.forms.iter().enumerate() {
             if form.form_normalized == form_str_norm {
                 matches.push(i);

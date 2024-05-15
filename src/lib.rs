@@ -17,6 +17,8 @@ mod tests {
         let end = Instant::now();
         println!("Index build in: {:?}ms", end.duration_since(start));
         assert_eq!(index.get("לָלֶכֶת")[0].word.word_normalized, "ללכת");
+        assert_eq!(index.get("לצפות")[0].word.word_normalized, "לצפות");
+        assert_eq!(index.get("לצפות").len(), 2);
         // assert_ne!(index.matching_forms())
         // assert_eq!(index.get("לפגוע")[0].word_normalized, "לפגוע");
         // assert_eq!(index.get("חוֹלוֵשׁ")[0].word_normalized, "לחלוש");

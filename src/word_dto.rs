@@ -92,16 +92,42 @@ impl WordData {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchResult {
     pub word: WordData,
-    pub matching_forms: Vec<usize>,
+    pub matching_forms: Vec<MatchedForm>,
+}
+
+#[cfg_attr(feature = "wasm-support", wasm_bindgen(getter_with_clone))]
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MatchedForm {
+    pub index: usize,
+    pub kind: usize,
+}
+
+#[cfg_attr(feature = "wasm-support", wasm_bindgen)]
+#[derive(Serialize, Deserialize, Clone)]
+pub enum FormKind {
+    INFINITIVE = 0,
+    PASSIVE = 1,
+    ACTIVE = 2,
 }
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 impl SearchResult {
     #[cfg_attr(feature = "wasm-support", wasm_bindgen(constructor))]
-    pub fn new(word: WordData, matching_forms: Vec<usize>) -> SearchResult {
+    pub fn new(word: WordData, matching_forms: Vec<MatchedForm>) -> SearchResult {
         SearchResult {
             word,
             matching_forms,
+        }
+    }
+}
+
+#[cfg_attr(feature = "wasm-support", wasm_bindgen)]
+impl MatchedForm {
+    #[cfg_attr(feature = "wasm-support", wasm_bindgen(constructor))]
+    pub fn new(index: usize, kind: usize) -> MatchedForm {
+        MatchedForm {
+            index,
+            kind,
         }
     }
 }

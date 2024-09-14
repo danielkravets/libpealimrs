@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use crate::prefix_tree::Trie;
 use crate::proto::{convert_pb_to_dto, WORDS_PB};
 use crate::util::normalize;
-use crate::word_dto::{SearchResult, WordData};
+use crate::word_dto::{FormKind, MatchedForm, SearchResult, WordData};
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 pub struct WordIndex {
@@ -188,7 +188,7 @@ impl WordIndex {
     }
 
 
-    pub fn matching_forms(&self, word_id: &str, form_str: &str) -> Vec<usize> {
+    pub fn matching_forms(&self, word_id: &str, form_str: &str) -> Vec<MatchedForm> {
         let form_str_norm = normalize(form_str);
         let wd = self.data.get(word_id);
         return match wd {
@@ -201,17 +201,27 @@ impl WordIndex {
         };
     }
 
-    fn matching_forms_inner(word_data: &WordData, form_str_norm: &str) -> Vec<usize> {
-        let mut matches: Vec<usize> = Vec::new();
+    fn matching_forms_inner(word_data: &WordData, form_str_norm: &str) -> Vec<MatchedForm> {
+        let mut matches: Vec<MatchedForm> = Vec::new();
         if word_data.word_normalized == form_str_norm {
             // infinitive form is not in the list of forms
             // usize can't be negative, so we will use word_data.forms.len() as an indication
             // that it matches the infinitive form
-            matches.push(word_data.forms.len());
+            matches.push(MatchedForm{index: 0, kind: 0});
         }
         for (i, form) in word_data.forms.iter().enumerate() {
             if form.form_normalized == form_str_norm {
-                matches.push(i);
+                matches.push(MatchedForm{index: i, kind: 1});
+            }
+        }
+        match &word_data.passive {
+            None => {},
+            Some(passive) => {
+                for (i, form) in passive.iter().enumerate() {
+                    if form.form_normalized == form_str_norm {
+                        matches.push(MatchedForm{index: i, kind: 2});
+                    }
+                }
             }
         }
         matches
@@ -259,15 +269,6 @@ mod tests {
         assert_eq!(vec.len() == 1, true);
         assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
     }
-    // #[test]
-    // fn load_and_build_index_suggest_matching_forms_pual_search() {
-    //     let index = WordIndex::init_local();
-    //     let vec = index.suggest("תנוסי", 15);
-    //     println!("results: {:?}", vec.len());
-    //     assert_eq!(vec.len() > 0, true);
-    //     assert_eq!(vec.len() == 1, true);
-    //     assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
-    // }
     #[test]
     fn load_and_build_index_suggest_matching_forms_hufal() {
         let index = WordIndex::init_local();
@@ -276,5 +277,23 @@ mod tests {
         assert_eq!(vec.len() > 0, true);
         assert_eq!(vec.len() == 1, true);
         assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("HUF'AL"));
+    }
+    #[test]
+    fn load_and_build_index_suggest_matching_forms_pual_search() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("תנוסי", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+        // assert_eq!(vec.len() == 1, true);
+        // assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
+    }
+    #[test]
+    fn load_and_build_index_suggest_matching_forms_hufal_search() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("תנוסינה", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+        // assert_eq!(vec.len() == 1, true);
+        // assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("HUF'AL"));
     }
 }

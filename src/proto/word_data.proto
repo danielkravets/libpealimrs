@@ -55,13 +55,15 @@ message WordData {
   string url_id = 1;
   string word = 2;
   string word_en = 3;
-  string word_normalized = 4;
-  string transcription = 5;
-  string root = 6;
-  repeated WordForm forms = 7;
-  Binyan binyan = 8;
-  repeated WordForm passive = 9;
-  optional Binyan passive_binyan = 10;
+  string word_ru = 4;
+  string word_es = 5;
+  string word_normalized = 6;
+  string transcription = 7;
+  string root = 8;
+  repeated WordForm forms = 9;
+  Binyan binyan = 10;
+  repeated WordForm passive = 11;
+  optional Binyan passive_binyan = 12;
 }
 
 message WordDataList {

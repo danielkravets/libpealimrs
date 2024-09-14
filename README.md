@@ -12,3 +12,8 @@ libpealimrs
 ```cargo instruments --template "Allocations" --open```
 ## time profiler
 ```cargo instruments --template "Time Profiler" --open```
+
+
+# release for ios
+```cargo build --release --lib --target aarch64-apple-ios```
+```cargo build --release --lib --target aarch64-apple-ios```

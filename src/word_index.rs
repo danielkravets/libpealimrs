@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use prost::Message;
+use regex::Regex;
 use rmp_serde::decode::Error;
 use rmp_serde::from_read;
 #[cfg(feature = "wasm-support")]
@@ -17,6 +18,7 @@ pub struct WordIndex {
     index: HashMap<String, HashSet<String>>,
     roots_index: HashMap<String, HashSet<String>>,
     prefix_tree: Trie,
+    prefix_tree_en: Trie,
 }
 
 impl WordIndex {
@@ -47,6 +49,14 @@ impl WordIndex {
             word.root.clone(), HashSet::from([word.url_id.clone()])
         )).collect();
 
+        let mut translation_index = Trie::new();
+        for word in &words {
+            let translations = WordIndex::get_translations(word);
+            for translation in translations {
+                translation_index.insert(translation, word.url_id.clone());
+            }
+        }
+
         let mut hebrew_index: HashMap<String, HashSet<String>> = HashMap::new();
         for word in &words {
             if hebrew_index.contains_key(&word.word_normalized) {
@@ -68,6 +78,22 @@ impl WordIndex {
                     hebrew_index.insert(form.form_normalized.clone(), HashSet::from([word.url_id.clone()]));
                 }
             }
+            match &word.passive {
+                None => {},
+                Some(passive) => {
+                    for form in passive {
+                        if form.form_normalized.is_empty() {
+                            continue;
+                        }
+                        if hebrew_index.contains_key(&form.form_normalized) {
+                            // println!("Duplicate form: {}", form.form_normalized);
+                            hebrew_index.get_mut(&form.form_normalized).unwrap().insert(word.url_id.clone());
+                        } else {
+                            hebrew_index.insert(form.form_normalized.clone(), HashSet::from([word.url_id.clone()]));
+                        }
+                    }
+                }
+            }
         }
 
         for (form, data) in &hebrew_index {
@@ -79,8 +105,29 @@ impl WordIndex {
             data: data_index,
             index: hebrew_index,
             prefix_tree: trie,
+            prefix_tree_en: translation_index,
             roots_index: roots_index,
         }
+    }
+
+    fn get_translations(word_data: &WordData) -> Vec<String> {
+        // let word_en = word_data.word_en.clone();
+        let no_braces = Self::remove_braces(word_data.word_en.as_str());
+        let mut punkt_split: Vec<&str> = no_braces
+            .split(|c: char| c.is_ascii_punctuation()).collect();
+        // println!("punkt_split: {:?}", punkt_split);
+        let result = punkt_split.iter()
+            .map(|s| s.trim().trim_start_matches("to ").to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        // println!("result: {:?}", result);
+        result
+    }
+
+    fn remove_braces(input: &str) -> String {
+        let re = Regex::new(r"\(.*?\)").unwrap();
+        let result = re.replace_all(input, "");
+        result.into_owned()
     }
 
     fn collect_word_data_by_ids(&self, ids: &HashSet<String>) -> Vec<WordData> {
@@ -112,12 +159,31 @@ impl WordIndex {
     }
 
     pub fn suggest(&self, prefix: &str, limit: usize) -> Vec<SearchResult> {
-        let prefix_norm = normalize(prefix);
-        let ids = self.prefix_tree.find(prefix_norm.as_str(), limit);
+        let prefix_norm = normalize(prefix).trim_start_matches("to ").to_string();
+        let mut suggestions = self.suggest_hebrew(prefix_norm.as_str(), limit);
+        if suggestions.is_empty() {
+            suggestions = self.suggest_by_translation(prefix_norm.as_str(), limit);
+        }
+        return suggestions
+    }
+
+    pub fn suggest_hebrew(&self, prefix_norm: &str, limit: usize) -> Vec<SearchResult> {
+        // let prefix_norm = normalize(prefix);
+        let ids = self.prefix_tree.find(prefix_norm, limit);
         let word_datas: Vec<WordData> = ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect();
         word_datas.iter().map(|wd| SearchResult {
             word: wd.clone(),
-            matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm.as_str()),
+            matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm),
+        }).collect()
+    }
+
+    pub fn suggest_by_translation(&self, prefix_norm: &str, limit: usize) -> Vec<SearchResult> {
+        // let prefix_norm = normalize(prefix);
+        let ids = self.prefix_tree_en.find(prefix_norm, limit);
+        let word_datas: Vec<WordData> = ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect();
+        word_datas.iter().map(|wd| SearchResult {
+            word: wd.clone(),
+            matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm),
         }).collect()
     }
 
@@ -162,5 +228,53 @@ mod tests {
         let vec = index.matching_forms("9-lashevet", "תשב");
         println!("results: {:?}", vec.len());
         assert_eq!(vec.len(), 2);
+    }
+    #[test]
+    fn load_and_build_index_suggest() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("lea", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+    }
+    #[test]
+    fn load_and_build_index_suggest_passive() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("ללקט", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+    }
+    #[test]
+    fn load_and_build_index_suggest_matching_forms() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("ללח", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+    }
+    #[test]
+    fn load_and_build_index_suggest_matching_forms_pual() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("לְעוֹדֵד", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+        assert_eq!(vec.len() == 1, true);
+        assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
+    }
+    // #[test]
+    // fn load_and_build_index_suggest_matching_forms_pual_search() {
+    //     let index = WordIndex::init_local();
+    //     let vec = index.suggest("תנוסי", 15);
+    //     println!("results: {:?}", vec.len());
+    //     assert_eq!(vec.len() > 0, true);
+    //     assert_eq!(vec.len() == 1, true);
+    //     assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
+    // }
+    #[test]
+    fn load_and_build_index_suggest_matching_forms_hufal() {
+        let index = WordIndex::init_local();
+        let vec = index.suggest("להגזים", 15);
+        println!("results: {:?}", vec.len());
+        assert_eq!(vec.len() > 0, true);
+        assert_eq!(vec.len() == 1, true);
+        assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("HUF'AL"));
     }
 }

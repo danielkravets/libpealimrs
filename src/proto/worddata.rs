@@ -32,18 +32,22 @@ pub struct WordData {
     #[prost(string, tag = "3")]
     pub word_en: ::prost::alloc::string::String,
     #[prost(string, tag = "4")]
-    pub word_normalized: ::prost::alloc::string::String,
+    pub word_ru: ::prost::alloc::string::String,
     #[prost(string, tag = "5")]
-    pub transcription: ::prost::alloc::string::String,
+    pub word_es: ::prost::alloc::string::String,
     #[prost(string, tag = "6")]
+    pub word_normalized: ::prost::alloc::string::String,
+    #[prost(string, tag = "7")]
+    pub transcription: ::prost::alloc::string::String,
+    #[prost(string, tag = "8")]
     pub root: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag = "7")]
-    pub forms: ::prost::alloc::vec::Vec<WordForm>,
-    #[prost(enumeration = "Binyan", tag = "8")]
-    pub binyan: i32,
     #[prost(message, repeated, tag = "9")]
+    pub forms: ::prost::alloc::vec::Vec<WordForm>,
+    #[prost(enumeration = "Binyan", tag = "10")]
+    pub binyan: i32,
+    #[prost(message, repeated, tag = "11")]
     pub passive: ::prost::alloc::vec::Vec<WordForm>,
-    #[prost(enumeration = "Binyan", optional, tag = "10")]
+    #[prost(enumeration = "Binyan", optional, tag = "12")]
     pub passive_binyan: ::core::option::Option<i32>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

@@ -125,9 +125,6 @@ impl SearchResult {
 impl MatchedForm {
     #[cfg_attr(feature = "wasm-support", wasm_bindgen(constructor))]
     pub fn new(index: usize, kind: usize) -> MatchedForm {
-        MatchedForm {
-            index,
-            kind,
-        }
+        MatchedForm { index, kind }
     }
 }

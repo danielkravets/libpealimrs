@@ -1,13 +1,13 @@
 use std::collections::HashMap;
-use std::io::Read;
 
+use crate::proto::worddata::{
+    Binyan, Gender, Number, Person, Tense, WordData as WordDataPB, WordDataList,
+    WordForm as WordFormPB,
+};
 use lazy_static::lazy_static;
-use prost;
-use prost::Message;
 
-use crate::proto::worddata::{Binyan, Gender, Number, Person, Tense, WordData as WordDataPB, WordDataList, WordForm as WordFormPB};
 use crate::word_dto::{WordData, WordForm};
-pub(crate) const WORDS_PB: &'static [u8] = include_bytes!("../words/words.pb");
+pub(crate) const WORDS_PB: &[u8] = include_bytes!("../words/words.pb");
 mod build;
 pub(crate) mod worddata;
 lazy_static! {
@@ -25,13 +25,15 @@ lazy_static! {
 }
 
 pub(crate) fn read_from_bytes() -> Vec<WordDataPB> {
-    const WORDS_PB: &'static [u8] = include_bytes!("../words/words.pb");
+    const WORDS_PB: &[u8] = include_bytes!("../words/words.pb");
     let word_list: WordDataList = prost::Message::decode(WORDS_PB).unwrap();
-    return word_list.words;
+    word_list.words
 }
 
 pub(crate) fn convert_pb_to_dto(src: Vec<WordDataPB>) -> Vec<WordData> {
-    src.iter().map(|word_data_pb| convert_word_data_pb_to_dto(word_data_pb.clone())).collect()
+    src.iter()
+        .map(|word_data_pb| convert_word_data_pb_to_dto(word_data_pb.clone()))
+        .collect()
 }
 
 fn convert_word_data_pb_to_dto(word_data_pb: WordDataPB) -> WordData {
@@ -39,11 +41,15 @@ fn convert_word_data_pb_to_dto(word_data_pb: WordDataPB) -> WordData {
         None
     } else {
         Some(
-            word_data_pb.passive.iter().map(|form| convert_word_form_pb_to_dto(form.clone())).collect()
+            word_data_pb
+                .passive
+                .iter()
+                .map(|form| convert_word_form_pb_to_dto(form.clone()))
+                .collect(),
         )
     };
 
-    let passive_binyan = word_data_pb.passive_binyan.map(|binyan| convert_binyan_pb_to_dto(binyan));
+    let passive_binyan = word_data_pb.passive_binyan.map(convert_binyan_pb_to_dto);
     WordData {
         url_id: word_data_pb.url_id,
         word: word_data_pb.word,
@@ -51,10 +57,14 @@ fn convert_word_data_pb_to_dto(word_data_pb: WordDataPB) -> WordData {
         word_normalized: word_data_pb.word_normalized,
         transcription: word_data_pb.transcription,
         root: word_data_pb.root,
-        forms: word_data_pb.forms.iter().map(|form| convert_word_form_pb_to_dto(form.clone())).collect(),
+        forms: word_data_pb
+            .forms
+            .iter()
+            .map(|form| convert_word_form_pb_to_dto(form.clone()))
+            .collect(),
         binyan: convert_binyan_pb_to_dto(word_data_pb.binyan),
         passive: passives,
-        passive_binyan: passive_binyan,
+        passive_binyan,
     }
 }
 
@@ -78,7 +88,9 @@ fn convert_tense_pb_to_dto(tense_pb: i32) -> String {
         1 => Tense::Present,
         2 => Tense::Future,
         _ => panic!("Invalid tense value: {}", tense_pb),
-    }.as_str_name().to_lowercase()
+    }
+    .as_str_name()
+    .to_lowercase()
 }
 
 fn convert_binyan_pb_to_dto(binyan_pb: i32) -> String {
@@ -91,8 +103,10 @@ fn convert_binyan_pb_to_dto(binyan_pb: i32) -> String {
         5 => Binyan::Hufal,
         6 => Binyan::Hitpael,
         _ => panic!("Invalid binyan value: {}", binyan_pb),
-    }.as_str_name().to_lowercase();
-    return BINYANS.get(binyan_raw.as_str()).unwrap().to_string();
+    }
+    .as_str_name()
+    .to_lowercase();
+    BINYANS.get(binyan_raw.as_str()).unwrap().to_string()
 }
 
 fn convert_gender_pb_to_dto(gender: i32) -> String {
@@ -101,8 +115,10 @@ fn convert_gender_pb_to_dto(gender: i32) -> String {
         1 => Gender::F,
         2 => Gender::AllG,
         _ => panic!("Invalid binyan value: {}", gender),
-    }.as_str_name().to_lowercase();
-    return unify_all(val);
+    }
+    .as_str_name()
+    .to_lowercase();
+    unify_all(val)
 }
 
 fn convert_number_pb_to_dto(number_pb: i32) -> String {
@@ -110,7 +126,9 @@ fn convert_number_pb_to_dto(number_pb: i32) -> String {
         0 => Number::Singular,
         1 => Number::Plural,
         _ => panic!("Invalid number value: {}", number_pb),
-    }.as_str_name().to_lowercase()
+    }
+    .as_str_name()
+    .to_lowercase()
 }
 
 fn convert_person_pb_to_dto(person_pb: i32) -> String {
@@ -120,24 +138,25 @@ fn convert_person_pb_to_dto(person_pb: i32) -> String {
         2 => Person::P3rd,
         3 => Person::AllP,
         _ => panic!("Invalid person value: {}", person_pb),
-    }.as_str_name().to_lowercase();
-    return unify_all(val);
+    }
+    .as_str_name()
+    .to_lowercase();
+    unify_all(val)
 }
 
 fn unify_all(val: String) -> String {
     if val.starts_with("all") {
         return "all".to_string();
     }
-    return val;
+    val
 }
-
 
 #[cfg(test)]
 mod tests {
     use prost::Message;
 
-    use crate::proto::{convert_pb_to_dto, WORDS_PB};
     use crate::proto::worddata::WordDataList;
+    use crate::proto::{convert_pb_to_dto, WORDS_PB};
     use crate::word_dto::WordData;
 
     #[test]

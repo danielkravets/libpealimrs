@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use crate::prefix_tree::Trie;
 use crate::proto::{convert_pb_to_dto, WORDS_PB};
 use crate::util::normalize;
-use crate::word_dto::{FormKind, MatchedForm, SearchResult, WordData};
+use crate::word_dto::{MatchedForm, SearchResult, WordData};
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 pub struct WordIndex {
@@ -23,31 +23,33 @@ pub struct WordIndex {
 
 impl WordIndex {
     pub fn load_data(data: &[u8]) -> Result<Vec<WordData>, Error> {
-        let my_data: Vec<WordData> = from_read(&data[..])?;
+        let my_data: Vec<WordData> = from_read(data)?;
         Ok(my_data)
     }
 }
 
 #[cfg_attr(feature = "wasm-support", wasm_bindgen)]
 impl WordIndex {
-
     pub fn init_local() -> WordIndex {
         let word_list: crate::proto::worddata::WordDataList = Message::decode(WORDS_PB).unwrap();
         let word_datas: Vec<WordData> = convert_pb_to_dto(word_list.words);
-        let index = WordIndex::build(word_datas);
-        index
+
+        WordIndex::build(word_datas)
     }
 
     pub fn build(words: Vec<WordData>) -> WordIndex {
-
         // collect words vector into a hashmap with url_id as key
-        let data_index: HashMap<String, WordData> = words.iter().map(|word| (word.url_id.clone(), word.clone())).collect();
+        let data_index: HashMap<String, WordData> = words
+            .iter()
+            .map(|word| (word.url_id.clone(), word.clone()))
+            .collect();
 
         let mut trie = Trie::new();
 
-        let roots_index: HashMap<String, HashSet<String>> = words.iter().map(|word| (
-            word.root.clone(), HashSet::from([word.url_id.clone()])
-        )).collect();
+        let roots_index: HashMap<String, HashSet<String>> = words
+            .iter()
+            .map(|word| (word.root.clone(), HashSet::from([word.url_id.clone()])))
+            .collect();
 
         let mut translation_index = Trie::new();
         for word in &words {
@@ -61,9 +63,15 @@ impl WordIndex {
         for word in &words {
             if hebrew_index.contains_key(&word.word_normalized) {
                 // println!("Duplicate form: {}", word.word_normalized);
-                hebrew_index.get_mut(&word.word_normalized).unwrap().insert(word.url_id.clone());
+                hebrew_index
+                    .get_mut(&word.word_normalized)
+                    .unwrap()
+                    .insert(word.url_id.clone());
             } else {
-                hebrew_index.insert(word.word_normalized.clone(), HashSet::from([word.url_id.clone()]));
+                hebrew_index.insert(
+                    word.word_normalized.clone(),
+                    HashSet::from([word.url_id.clone()]),
+                );
             }
         }
         for word in &words {
@@ -73,13 +81,19 @@ impl WordIndex {
                 }
                 if hebrew_index.contains_key(&form.form_normalized) {
                     // println!("Duplicate form: {}", form.form_normalized);
-                    hebrew_index.get_mut(&form.form_normalized).unwrap().insert(word.url_id.clone());
+                    hebrew_index
+                        .get_mut(&form.form_normalized)
+                        .unwrap()
+                        .insert(word.url_id.clone());
                 } else {
-                    hebrew_index.insert(form.form_normalized.clone(), HashSet::from([word.url_id.clone()]));
+                    hebrew_index.insert(
+                        form.form_normalized.clone(),
+                        HashSet::from([word.url_id.clone()]),
+                    );
                 }
             }
             match &word.passive {
-                None => {},
+                None => {}
                 Some(passive) => {
                     for form in passive {
                         if form.form_normalized.is_empty() {
@@ -87,9 +101,15 @@ impl WordIndex {
                         }
                         if hebrew_index.contains_key(&form.form_normalized) {
                             // println!("Duplicate form: {}", form.form_normalized);
-                            hebrew_index.get_mut(&form.form_normalized).unwrap().insert(word.url_id.clone());
+                            hebrew_index
+                                .get_mut(&form.form_normalized)
+                                .unwrap()
+                                .insert(word.url_id.clone());
                         } else {
-                            hebrew_index.insert(form.form_normalized.clone(), HashSet::from([word.url_id.clone()]));
+                            hebrew_index.insert(
+                                form.form_normalized.clone(),
+                                HashSet::from([word.url_id.clone()]),
+                            );
                         }
                     }
                 }
@@ -106,17 +126,19 @@ impl WordIndex {
             index: hebrew_index,
             prefix_tree: trie,
             prefix_tree_en: translation_index,
-            roots_index: roots_index,
+            roots_index,
         }
     }
 
     fn get_translations(word_data: &WordData) -> Vec<String> {
         // let word_en = word_data.word_en.clone();
         let no_braces = Self::remove_braces(word_data.word_en.as_str());
-        let mut punkt_split: Vec<&str> = no_braces
-            .split(|c: char| c.is_ascii_punctuation()).collect();
+        let punkt_split: Vec<&str> = no_braces
+            .split(|c: char| c.is_ascii_punctuation())
+            .collect();
         // println!("punkt_split: {:?}", punkt_split);
-        let result = punkt_split.iter()
+        let result = punkt_split
+            .iter()
             .map(|s| s.trim().trim_start_matches("to ").to_string())
             .filter(|s| !s.is_empty())
             .collect();
@@ -131,15 +153,15 @@ impl WordIndex {
     }
 
     fn collect_word_data_by_ids(&self, ids: &HashSet<String>) -> Vec<WordData> {
-        ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect()
+        ids.iter()
+            .map(|id| self.data.get(id).unwrap().clone())
+            .collect()
     }
 
     pub fn get_by_root(&self, root: &str) -> Vec<WordData> {
         let val = self.roots_index.get(root);
         match val {
-            Some(v) => {
-                self.collect_word_data_by_ids(v)
-            }
+            Some(v) => self.collect_word_data_by_ids(v),
             None => vec![],
         }
     }
@@ -148,12 +170,14 @@ impl WordIndex {
         let word_norm = normalize(word);
         let val = self.index.get(word_norm.as_str());
         match val {
-            Some(v) => {
-                self.collect_word_data_by_ids(v).iter().map(|wd| SearchResult {
+            Some(v) => self
+                .collect_word_data_by_ids(v)
+                .iter()
+                .map(|wd| SearchResult {
                     word: wd.clone(),
                     matching_forms: WordIndex::matching_forms_inner(wd, word_norm.as_str()),
-                }).collect()
-            }
+                })
+                .collect(),
             None => vec![],
         }
     }
@@ -164,41 +188,50 @@ impl WordIndex {
         if suggestions.is_empty() {
             suggestions = self.suggest_by_translation(prefix_norm.as_str(), limit);
         }
-        return suggestions
+        suggestions
     }
 
     pub fn suggest_hebrew(&self, prefix_norm: &str, limit: usize) -> Vec<SearchResult> {
         // let prefix_norm = normalize(prefix);
         let ids = self.prefix_tree.find(prefix_norm, limit);
-        let word_datas: Vec<WordData> = ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect();
-        word_datas.iter().map(|wd| SearchResult {
-            word: wd.clone(),
-            matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm),
-        }).collect()
+        let word_datas: Vec<WordData> = ids
+            .iter()
+            .map(|id| self.data.get(id).unwrap().clone())
+            .collect();
+        word_datas
+            .iter()
+            .map(|wd| SearchResult {
+                word: wd.clone(),
+                matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm),
+            })
+            .collect()
     }
 
     pub fn suggest_by_translation(&self, prefix_norm: &str, limit: usize) -> Vec<SearchResult> {
         // let prefix_norm = normalize(prefix);
         let ids = self.prefix_tree_en.find(prefix_norm, limit);
-        let word_datas: Vec<WordData> = ids.iter().map(|id| self.data.get(id).unwrap().clone()).collect();
-        word_datas.iter().map(|wd| SearchResult {
-            word: wd.clone(),
-            matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm),
-        }).collect()
+        let word_datas: Vec<WordData> = ids
+            .iter()
+            .map(|id| self.data.get(id).unwrap().clone())
+            .collect();
+        word_datas
+            .iter()
+            .map(|wd| SearchResult {
+                word: wd.clone(),
+                matching_forms: WordIndex::matching_forms_inner(wd, prefix_norm),
+            })
+            .collect()
     }
-
 
     pub fn matching_forms(&self, word_id: &str, form_str: &str) -> Vec<MatchedForm> {
         let form_str_norm = normalize(form_str);
         let wd = self.data.get(word_id);
-        return match wd {
+        match wd {
             None => {
                 vec![]
             }
-            Some(word_data) => {
-                WordIndex::matching_forms_inner(word_data, form_str_norm.as_str())
-            }
-        };
+            Some(word_data) => WordIndex::matching_forms_inner(word_data, form_str_norm.as_str()),
+        }
     }
 
     fn matching_forms_inner(word_data: &WordData, form_str_norm: &str) -> Vec<MatchedForm> {
@@ -207,19 +240,19 @@ impl WordIndex {
             // infinitive form is not in the list of forms
             // usize can't be negative, so we will use word_data.forms.len() as an indication
             // that it matches the infinitive form
-            matches.push(MatchedForm{index: 0, kind: 0});
+            matches.push(MatchedForm { index: 0, kind: 0 });
         }
         for (i, form) in word_data.forms.iter().enumerate() {
             if form.form_normalized == form_str_norm {
-                matches.push(MatchedForm{index: i, kind: 1});
+                matches.push(MatchedForm { index: i, kind: 1 });
             }
         }
         match &word_data.passive {
-            None => {},
+            None => {}
             Some(passive) => {
                 for (i, form) in passive.iter().enumerate() {
                     if form.form_normalized == form_str_norm {
-                        matches.push(MatchedForm{index: i, kind: 2});
+                        matches.push(MatchedForm { index: i, kind: 2 });
                     }
                 }
             }
@@ -244,29 +277,29 @@ mod tests {
         let index = WordIndex::init_local();
         let vec = index.suggest("lea", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
+        assert!(!vec.is_empty());
     }
     #[test]
     fn load_and_build_index_suggest_passive() {
         let index = WordIndex::init_local();
         let vec = index.suggest("ללקט", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
+        assert!(!vec.is_empty());
     }
     #[test]
     fn load_and_build_index_suggest_matching_forms() {
         let index = WordIndex::init_local();
         let vec = index.suggest("ללח", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
+        assert!(!vec.is_empty());
     }
     #[test]
     fn load_and_build_index_suggest_matching_forms_pual() {
         let index = WordIndex::init_local();
         let vec = index.suggest("לְעוֹדֵד", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
-        assert_eq!(vec.len() == 1, true);
+        assert!(!vec.is_empty());
+        assert!(vec.len() == 1);
         assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
     }
     #[test]
@@ -274,8 +307,8 @@ mod tests {
         let index = WordIndex::init_local();
         let vec = index.suggest("להגזים", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
-        assert_eq!(vec.len() == 1, true);
+        assert!(!vec.is_empty());
+        assert!(vec.len() == 1);
         assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("HUF'AL"));
     }
     #[test]
@@ -283,7 +316,7 @@ mod tests {
         let index = WordIndex::init_local();
         let vec = index.suggest("תנוסי", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
+        assert!(!vec.is_empty());
         // assert_eq!(vec.len() == 1, true);
         // assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("PU'AL"));
     }
@@ -292,7 +325,7 @@ mod tests {
         let index = WordIndex::init_local();
         let vec = index.suggest("תנוסינה", 15);
         println!("results: {:?}", vec.len());
-        assert_eq!(vec.len() > 0, true);
+        assert!(!vec.is_empty());
         // assert_eq!(vec.len() == 1, true);
         // assert_eq!(vec[0].word.passive_binyan.as_deref(), Some("HUF'AL"));
     }

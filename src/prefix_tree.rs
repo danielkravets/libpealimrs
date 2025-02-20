@@ -17,14 +17,15 @@ impl TrieNode {
     }
 }
 
-
 pub(crate) struct Trie {
     root: TrieNode,
 }
 
 impl Trie {
     pub(crate) fn new() -> Self {
-        Trie { root: TrieNode::new() }
+        Trie {
+            root: TrieNode::new(),
+        }
     }
 
     pub(crate) fn insert(&mut self, word: String, id: String) {
@@ -37,30 +38,30 @@ impl Trie {
         This functionality is not provided by Rust's standard library, check crates. io instead.
         */
         for c in word.chars() {
-            node = node.children.entry(c).or_insert_with(TrieNode::new)
+            node = node.children.entry(c).or_default()
         }
         // if node.is_word_end && node.ids != None {
         //     println!("Duplicate word: {}", word);
         // }
         node.is_word_end = true;
-        if node.ids == None {
+        if node.ids.is_none() {
             node.ids = Some(HashSet::new());
         }
         node.ids.as_mut().unwrap().insert(id);
     }
 
     pub(crate) fn find_string(&self, prefix: String, limit: usize) -> Vec<String> {
-        return self.find(&prefix, limit);
+        self.find(&prefix, limit)
     }
 
     pub(crate) fn find(&self, prefix: &str, limit: usize) -> Vec<String> {
         // let mut results = Vec::new();
         let node_opt = self.starts_with(prefix);
 
-        return match node_opt {
+        match node_opt {
             None => Vec::new(),
             Some(n) => self.get_all_ids_from(n, limit),
-        };
+        }
     }
 
     fn get_all_ids_from(&self, node: &TrieNode, limit: usize) -> Vec<String> {
@@ -80,13 +81,13 @@ impl Trie {
                     }
                 }
             }
-            for (_, child_node) in &node.children {
+            for child_node in node.children.values() {
                 stack.push_back(child_node);
             }
         }
         // limit ids to limit
         ids.truncate(limit);
-        return ids;
+        ids
     }
 
     fn starts_with(&self, prefix: &str) -> Option<&TrieNode> {
@@ -97,7 +98,7 @@ impl Trie {
                 None => return None,
             }
         }
-        return Some(node);
+        Some(node)
     }
 }
 
@@ -120,8 +121,8 @@ mod tests {
         let vec = trie.find("lab", 15);
         // assert both "1" and "2" are in the vec
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec.contains(&String::from("1")), true);
-        assert_eq!(vec.contains(&String::from("2")), true);
+        assert!(vec.contains(&String::from("1")));
+        assert!(vec.contains(&String::from("2")));
     }
 
     #[test]
@@ -135,8 +136,8 @@ mod tests {
         let vec = trie.find("lab", 2);
         // assert both "1" and "2" are in the vec
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec.contains(&String::from("2")), true);
-        assert_eq!(vec.contains(&String::from("3")), true);
+        assert!(vec.contains(&String::from("2")));
+        assert!(vec.contains(&String::from("3")));
     }
 
     #[test]
@@ -144,7 +145,13 @@ mod tests {
         let test_cases = vec![
             TestCase {
                 words_to_insert: vec!["hello", "hell", "helium"],
-                searches: vec![("hello", 1), ("hell", 2), ("helium", 1), ("help", 0), ("he", 3)],
+                searches: vec![
+                    ("hello", 1),
+                    ("hell", 2),
+                    ("helium", 1),
+                    ("help", 0),
+                    ("he", 3),
+                ],
             },
             TestCase {
                 words_to_insert: vec!["apple", "app"],
@@ -167,7 +174,12 @@ mod tests {
             }
             for (search_word, expected) in case.searches {
                 let results = trie.find(search_word, 15);
-                assert_eq!(results.len(), expected, "Failed search for '{}'", search_word);
+                assert_eq!(
+                    results.len(),
+                    expected,
+                    "Failed search for '{}'",
+                    search_word
+                );
             }
         }
     }

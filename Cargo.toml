@@ -13,7 +13,13 @@ name = "protoc"
 path = "src/proto/build.rs"
 
 [features]
-wasm-support = ["wasm-bindgen"]
+wasm-support = [
+    "wasm-bindgen",
+    "wasm-bindgen-futures",
+    "js-sys",
+    "futures",
+    "serde-wasm-bindgen"
+]
 
 [dependencies]
 prost = "0.12.4"
@@ -25,10 +31,13 @@ serde_json = "1.0.116"
 unicode-normalization = "0.1.23"
 unicode-segmentation = "1.11.0"
 wasm-bindgen =  { version = "0.2.92", optional = true }
+wasm-bindgen-futures = { version = "0.4.42", optional = true }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
 lazy_static = "1.4.0"
 regex = "1.10.4"
+js-sys = { version = "0.3.69", optional = true }
+futures = { version = "0.3", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2.92"
-wasm-bindgen-futures = { version = "0.4.42"}
+wasm-bindgen =  { version = "0.2.92", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
